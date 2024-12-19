@@ -1,151 +1,67 @@
 import streamlit as st
 import pandas as pd
-import math
+import requests
 from pathlib import Path
+import datetime
 
 # Set the title and favicon that appear in the Browser's tab bar.
 st.set_page_config(
-    page_title='GDP dashboard',
+    layout='centered',
+    page_title='OSRS Grand Exchange Tracker',
     page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
 )
 
-# -----------------------------------------------------------------------------
-# Declare some useful functions.
-
-@st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
-
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
-    """
-
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
-
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
-
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
-    )
-
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
-
-    return gdp_df
-
-gdp_df = get_gdp_data()
-
-# -----------------------------------------------------------------------------
-# Draw the actual page
-
 # Set the title that appears at the top of the page.
 '''
-# :earth_americas: GDP dashboard
+# :earth_americas: OSRS Grand Exchange Tracker
 
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
+# Browse GE data from the [OSRS Grand Exchange Data](https://secure.runescape.com/m=itemdb_oldschool/) website.
+# '''
 
-# Add some spacing
-''
-''
+def convert_ms_to_datetime(ms):
+     """Converts milliseconds since 1 January 1970 to a datetime object."""
+     seconds = ms / 1000.0
+     return datetime.fromtimestamp(seconds)
 
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
+@st.cache_data
+def get_my_investment_data():
+    DATA_FILENAME = Path(__file__).parent/'data/osrs_investments.json'
+    df = pd.read_json(DATA_FILENAME)
+    return df
 
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
+def get_ge_basic_info(id:int):
+    resp = requests.get(f"https://secure.runescape.com/m=itemdb_oldschool/api/catalogue/detail.json?item={id}")
+    return resp.json()
 
-countries = gdp_df['Country Code'].unique()
+def get_ge_historic_info(id:int):
+    resp = requests.get(f"https://secure.runescape.com/m=itemdb_oldschool/api/graph/{id}.json")
+    df = pd.DataFrame(resp.json()["daily"].items(), columns=['date', 'price'])
+    df['date'] = pd.to_datetime(df['date'], unit='ms')
 
-if not len(countries):
-    st.warning("Select at least one country")
+    return df
 
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
+investment_list = get_my_investment_data()
 
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
+event = st.dataframe(
+    investment_list,
+    on_select='rerun',
+    selection_mode='single-row'
 )
 
-''
-''
+def render_item_info(item_id):
+    item_info = get_ge_basic_info(item_id)
+    item_name = item_info["item"]["name"]
+    item_icon = item_info["item"]["icon_large"]
 
+    img_column, mid, title_column = st.columns([5,1,20])
+    with img_column:
+        st.image(item_icon)
+    with title_column:
+        st.title(item_name)
 
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
+    st.line_chart(get_ge_historic_info(item_id), x="date", y="price")
 
-st.header(f'GDP in {to_year}', divider='gray')
-
-''
-
-cols = st.columns(4)
-
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
-
-    with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
-        else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
-
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
+if len(event.selection['rows']):
+    selected_row = event.selection['rows'][0]
+    item_id_selected = investment_list.iloc[selected_row]['item_id']
+    render_item_info(item_id_selected)
