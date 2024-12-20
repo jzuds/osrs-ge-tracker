@@ -18,11 +18,6 @@ st.set_page_config(
 # Browse GE data from the [OSRS Grand Exchange Data](https://secure.runescape.com/m=itemdb_oldschool/) website.
 # '''
 
-def convert_ms_to_datetime(ms):
-     """Converts milliseconds since 1 January 1970 to a datetime object."""
-     seconds = ms / 1000.0
-     return datetime.fromtimestamp(seconds)
-
 @st.cache_data
 def get_my_investment_data():
     DATA_FILENAME = Path(__file__).parent/'data/osrs_investments.json'
@@ -52,6 +47,8 @@ def render_item_info(item_id):
     item_info = get_ge_basic_info(item_id)
     item_name = item_info["item"]["name"]
     item_icon = item_info["item"]["icon_large"]
+    item_current_price = item_info["item"]["current"]["price"]
+    item_30d_percent_change_price = item_info["item"]["day30"]["change"]
 
     img_column, mid, title_column = st.columns([5,1,20])
     with img_column:
@@ -59,6 +56,7 @@ def render_item_info(item_id):
     with title_column:
         st.title(item_name)
 
+    st.metric(label='current price', value=item_current_price, delta=item_30d_percent_change_price)
     st.line_chart(get_ge_historic_info(item_id), x="date", y="price")
 
 if len(event.selection['rows']):
