@@ -35,6 +35,31 @@ def get_ge_historic_info(id:int):
 
     return df
 
+def render_item_info(item_id: int, calc_profit_item_amount, calc_profit_item_price):
+    item_info = get_ge_basic_info(item_id)
+    item_name = item_info["item"]["name"]
+    item_icon = item_info["item"]["icon_large"]
+    item_30d_percent_change_price = item_info["item"]["day30"]["change"]
+    df_item_historic_pricing = get_ge_historic_info(item_id)
+    current_price = df_item_historic_pricing.iloc[-1]["price"]
+
+    img_column, mid, title_column = st.columns([5,1,20])
+    with img_column:
+        st.image(item_icon)
+    with title_column:
+        st.title(item_name)
+
+    kpi_1, mid, kpi_2 = st.columns([5,1,20])
+    with kpi_1:
+        st.metric(label='current price', value=current_price, delta=item_30d_percent_change_price)
+    
+    if calc_profit_item_amount > 0:
+        with kpi_2:
+            st.metric(label='calculated profit', value=int(current_price - calc_profit_item_price) * calc_profit_item_amount, delta=int(current_price - calc_profit_item_price))
+
+    st.line_chart(df_item_historic_pricing, x="date", y="price")
+
+# Main
 investment_list = get_my_investment_data()
 
 event = st.dataframe(
@@ -43,23 +68,14 @@ event = st.dataframe(
     selection_mode='single-row'
 )
 
-def render_item_info(item_id):
-    item_info = get_ge_basic_info(item_id)
-    item_name = item_info["item"]["name"]
-    item_icon = item_info["item"]["icon_large"]
-    item_current_price = item_info["item"]["current"]["price"]
-    item_30d_percent_change_price = item_info["item"]["day30"]["change"]
-
-    img_column, mid, title_column = st.columns([5,1,20])
-    with img_column:
-        st.image(item_icon)
-    with title_column:
-        st.title(item_name)
-
-    st.metric(label='current price', value=item_current_price, delta=item_30d_percent_change_price)
-    st.line_chart(get_ge_historic_info(item_id), x="date", y="price")
-
 if len(event.selection['rows']):
     selected_row = event.selection['rows'][0]
     item_id_selected = investment_list.iloc[selected_row]['item_id']
-    render_item_info(item_id_selected)
+    calc_profit_item_amount = 0
+    calc_profit_item_price = 0
+
+    if investment_list.iloc[selected_row]['ge_type'] == 'purchase':
+        calc_profit_item_amount = investment_list.iloc[selected_row]['amount']
+        calc_profit_item_price = investment_list.iloc[selected_row]['price']
+    
+    render_item_info(item_id_selected, calc_profit_item_amount, calc_profit_item_price)
