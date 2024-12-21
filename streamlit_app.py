@@ -62,10 +62,12 @@ def render_item_info(item_id: int, calc_profit_item_amount, calc_profit_item_pri
 # Main
 investment_list = get_my_investment_data()
 
+st.header("Watch List")
 event = st.dataframe(
     investment_list,
     on_select='rerun',
-    selection_mode='single-row'
+    selection_mode='single-row',
+    hide_index=True
 )
 
 if len(event.selection['rows']):
