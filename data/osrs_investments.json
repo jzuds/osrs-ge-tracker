@@ -10,37 +10,49 @@
     {
         "item_id": 4153,
         "item_name": "gmaul",
-        "amount": 1,
-        "price": 699463,
-        "date": "12/16/2024",
         "ge_type": "watch",
         "reason": "gargolye slayer task drop"
     },
     {
         "item_id": 561,
         "item_name": "nature_runes",
-        "amount": 1,
-        "price": 101,
-        "date": "12/20/2024",
         "ge_type": "watch",
         "reason": "alching"
     },
     {
         "item_id": 12934,
         "item_name": "zulrah_scales",
-        "amount": 1,
-        "price": 316,
-        "date": "12/20/2024",
         "ge_type": "watch",
-        "reason": "blowpipe"
+        "reason": "botting dumps"
     },
     {
         "item_id": 2,
         "item_name": "cannonballs",
-        "amount": 1,
-        "price": 185,
-        "date": "12/20/2024",
         "ge_type": "watch",
         "reason": "cannoning"
+    },
+    {
+        "item_id": 536,
+        "item_name": "dragon bones",
+        "ge_type": "watch",
+        "reason": "botting dumps"
+    },
+    {
+        "item_id": 10033,
+        "item_name": "chins",
+        "ge_type": "watch",
+        "reason": "botting dumps"
+    },
+    {
+        "item_id": 10034,
+        "item_name": "red chins",
+        "ge_type": "watch",
+        "reason": "botting dumps"
+    },
+    {
+        "item_id": 11959,
+        "item_name": "black chins",
+        "ge_type": "watch",
+        "reason": "botting dumps"
     }
 ]
